@@ -1,0 +1,47 @@
+{% load i18n static %}
+
+{% block html %}
+  <form style="display: none" id="kattely">
+    {% csrf_token %}
+    <input type="checkbox" name="uusi" checked/>
+  </form>
+{% endblock html %}
+
+{% block js %}
+  <script
+    src="https://cdn.jsdelivr.net/gh/Palindrom/JSONPatcherProxy@0.0.10/dist/jsonpatcherproxy.min.js"
+    ></script>
+  <script
+    src="https://cdn.jsdelivr.net/gh/bruth/jsonpatch-js@0.7.0/jsonpatch.js"
+    ></script>
+  <script
+    src="{% static "synkroni/js/synkroni.js" %}"
+    ></script>
+
+  <script>
+    (function () {
+      {% if not request.websocket %}
+        alert("{% trans "Ei Websocket-yhteyttä!" %}");
+        return;
+      {% endif %}
+      document.synkroni = new Synkroni(
+        // Websocket-yhteysosoite.
+        "{{ request.websocket }}{{ request.path }}",
+        function (e) {
+          // Kättelydata yhteyden avaamisen yhteydessä.
+          let kattely = document.getElementById("kattely");
+          let data = JSON.stringify(
+            Object.fromEntries(
+              new FormData(kattely)
+            )
+          );
+          // Poista `uusi` kättelydatasta
+          kattely.querySelector("[name=uusi]")?.remove?.();
+          return data;
+        },
+        // Palvelimen kanssa synkronoitavan datan alkutilanne.
+        {{ view.data_alkutilanne|safe }}
+      );
+    })();
+  </script>
+{% endblock js %}

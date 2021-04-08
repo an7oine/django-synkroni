@@ -1,0 +1,2 @@
+recursive-include synkroni/static *
+recursive-include synkroni/templates *
