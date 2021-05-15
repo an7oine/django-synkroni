@@ -149,6 +149,16 @@ class Synkroni(SingleObjectMixin, WebsocketNakyma):
     try:
       while True:
         sanoma = await request.receive()
+        if set(sanoma) == {'n', 'o'}:
+          kaaritty_sanoma = sanoma['o']
+          while sanoma['n'] > 0:
+            sanoma = await request.receive()
+            assert set(sanoma) == {'n', 'o'}
+            kaaritty_sanoma += sanoma['o']
+          sanoma = json.loads(
+            kaaritty_sanoma,
+            cls=self.json_latain
+          )
         await self.kasittele_saapuva_sanoma(request, sanoma)
         # while True
 

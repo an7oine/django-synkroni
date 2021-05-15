@@ -1,4 +1,13 @@
 (function () {
+  function patkiOsiin(jono, koko) {
+    const kpl = Math.ceil(jono.length / koko);
+    const osat = new Array(kpl);
+    for (let i = 0, o = 0; i < kpl; ++i, o += koko) {
+      osat[i] = jono.substr(o, koko);
+    }
+    return osat;
+  }
+
   var Synkroni = function (osoite, kattely, data) {
     this.osoite = osoite;
     this.kattely = kattely;
@@ -17,6 +26,8 @@
   };
 
   Object.assign(Synkroni.prototype, {
+    MAKSIMIDATA: 1024 * 1024,
+
     _avaaYhteys: function () {
       this.yhteys = new WebSocket(this.osoite);
       Object.assign(this.yhteys, {
@@ -71,7 +82,27 @@
 
     _lahetaData: function(data) {
       let json = JSON.stringify(data);
-      this.yhteys.send(json);
+      if (json.length <= this.MAKSIMIDATA) {
+        this.yhteys.send(json);
+      }
+      else {
+        // Kääri JSON-data määrämittaisiin paketteihin
+        // ja lähetä ne erikseen.
+        let osat = patkiOsiin(
+          json.replace(
+            /[\\]/g, '\\\\'
+          ).replace(
+            /[\"]/g, '\\\"'
+          ),
+          // 21 -> kääreen kehys.
+          this.MAKSIMIDATA - 21
+        );
+        osat.forEach(function (osa, i) {
+          this.yhteys.send(
+            `{"n": ${osat.length - i - 1}, "o": "${osa}"}`
+          );
+        }.bind(this))
+      }
     },
 
     _lahtevaMuutos: function (p) {
