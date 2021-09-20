@@ -1,29 +1,39 @@
 (function () {
-  function patkiOsiin(jono, koko) {
-    const kpl = Math.ceil(jono.length / koko);
-    const osat = new Array(kpl);
-    for (let i = 0, o = 0; i < kpl; ++i, o += koko) {
-      osat[i] = jono.substr(o, koko);
-    }
-    return osat;
-  }
+  /*
+   * Luo Websocket-palvelinyhteys.
+   */
+  const {websocket, kattely, alkutila} = document.currentScript.dataset;
 
-  var Synkroni = function (osoite, kattely, data) {
-    this.osoite = osoite;
+  function Synkroni() {
+    this.osoite = websocket;
     this.kattely = kattely;
     this.komennot = {};
     this.yhteys = null;
     this.komento_id = 0;
-    this.tarkkailija = new JSONPatcherProxy(data || {});
-    this.data = this.tarkkailija.observe(
-      true, this._lahtevaMuutos.bind(this)
-    );
     this.lahetysjono = [];
+    this.data = JSON.parse(
+      alkutila? alkutila.replace(/'/g, '"') : "{}"
+    );
+
+    if (window.JSONPatcherProxy) {
+      this.tarkkailija = new JSONPatcherProxy(this.data);
+      this.data = this.tarkkailija.observe(
+        true, this._lahtevaMuutos.bind(this)
+      );
+    }
+
     this._avaaYhteys();
-    // Kuuntelijat.
-    this.yhteysAvattu = null;
-    this.yhteysKatkaistu = null;
-  };
+
+    // Jätä jonoon yhteyskokeilu palvelimelle.
+    // Paluusanoman yhteydessä merkitään yhteys avatuksi.
+    this.komento({
+      alustus_valmis: {},
+    }, function () {
+      document.dispatchEvent(
+        new Event("yhteys-alustettu")
+      );
+    });
+  }
 
   Object.assign(Synkroni.prototype, {
     MAKSIMIDATA: 1024 * 1024,
@@ -37,25 +47,19 @@
       });
     },
     _yhteysAvattu: function (e) {
-      if (typeof this.kattely === "function") {
-        this._lahetaData(this.kattely(e));
-      }
-      else if (this.kattely) {
-        this._lahetaData(this.kattely);
-      }
+      this.yhteys.send(this.kattely);
       for (lahteva_sanoma of this.lahetysjono) {
         this._lahetaData(lahteva_sanoma);
       }
       this.lahetysjono = [];
-
-      // Lähetä tieto mahdolliselle kuuntelijalle.
-      if (typeof this.yhteysAvattu === "function")
-        this.yhteysAvattu(e);
+      document.dispatchEvent(
+        new Event("yhteys-avattu")
+      );
     },
     _yhteysKatkaistu: function (e) {
-      // Lähetä tieto mahdolliselle kuuntelijalle.
-      if (typeof this.yhteysKatkaistu === "function")
-        this.yhteysKatkaistu(e);
+      document.dispatchEvent(
+        new Event("yhteys-katkaistu")
+      );
 
       // Poista aiempi yhteys.
       this.yhteys = null;
@@ -64,7 +68,7 @@
       // mikäli yhteys katkesi muusta kuin käyttäjästä
       // johtuvasta syystä.
       if (e.code > 1001)
-        window.setTimeout(this._avaaYhteys.bind(this), 100);
+        window.setTimeout(this._avaaYhteys.bind(this), 200);
     },
     _viestiVastaanotettu: function (e) {
       let data = JSON.parse(e.data);
@@ -88,7 +92,7 @@
       else {
         // Kääri JSON-data määrämittaisiin paketteihin
         // ja lähetä ne erikseen.
-        let osat = patkiOsiin(
+        let osat = this._patkiOsiin(
           json.replace(
             /[\\]/g, '\\\\'
           ).replace(
@@ -115,9 +119,12 @@
       }
     },
     _saapuvaMuutos: function (p) {
-      this.tarkkailija.pause();
+      this.tarkkailija?.pause?.();
       jsonpatch.apply(this.data, p);
-      this.tarkkailija.resume();
+      this.tarkkailija?.resume?.();
+      document.dispatchEvent(
+        new Event("data-paivitetty")
+      );
     },
 
     komento: function (data, vastaus) {
@@ -132,8 +139,17 @@
         // Jätä sanoma jonoon, mikäli yhteyttä ei ole.
         this.lahetysjono.push(data);
       }
+    },
+
+    _patkiOsiin: function (jono, koko) {
+      const kpl = Math.ceil(jono.length / koko);
+      const osat = new Array(kpl);
+      for (let i = 0, o = 0; i < kpl; ++i, o += koko) {
+        osat[i] = jono.substr(o, koko);
+      }
+      return osat;
     }
   });
 
-  window.Synkroni = Synkroni;
+  document.synkroni = new Synkroni();
 })();

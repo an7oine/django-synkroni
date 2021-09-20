@@ -1,36 +1,39 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
-import functools
 import json
-import traceback
-from types import SimpleNamespace
+# from types import SimpleNamespace
 
 from asgiref.sync import sync_to_async
 
 from django.utils.functional import (
-  cached_property,
+  # cached_property,
   classproperty,
 )
 from django.views.generic.detail import SingleObjectMixin
 
-from pistoke.nakyma import WebsocketNakyma
-from pistoke.tyokalut import csrf_tarkistus, json_viestiliikenne
-
-from jsonpatch import JsonPatch, multidict
-
 from .mallit import SynkronoituvaMalli
+from .websocket import WebsocketYhteys
 
 
-class Synkroni(SingleObjectMixin, WebsocketNakyma):
+class Synkroni(SingleObjectMixin, WebsocketYhteys):
+  '''
+  Synkronoitu datayhteys selaimen ja tietokantaan tallennetun JSON-puun välillä.
 
+  JSON-protokolla poimitaan tietomallin `data`-kentän määritysten mukaan.
+
+  Alkutilanteessa data on `{"id": ...}`.
+  '''
+
+  # Tietokantamalli, jonka tietty, yksittäinen rivi toimii
+  # tietovarastona, johon selain synkronoidaan.
   model = SynkronoituvaMalli
 
-  data_alkutilanne = {}
+  # Tiedot synkronoidaan myös selaimelta palvelimelle päin.
+  kaksisuuntainen = True
 
-  async def suorita_komento(self, **kwargs):
+  async def suorita_toiminto(self, **kwargs):
     raise NotImplementedError
-
 
   @classproperty
   def json_koodain(cls):
@@ -42,90 +45,34 @@ class Synkroni(SingleObjectMixin, WebsocketNakyma):
     # pylint: disable=no-self-argument
     return cls.model._meta.get_field('data').decoder
 
-  @classproperty
-  def json_paikkain(cls):
-    # pylint: disable=no-self-argument
-    class JsonPaikkain(JsonPatch):
-      json_dumper = staticmethod(functools.partial(
-        json.dumps,
-        cls=cls.json_koodain,
-      ))
-      json_loader = staticmethod(functools.partial(
-        json.loads,
-        cls=cls.json_latain,
-        object_pairs_hook=multidict
-      ))
-      # class JsonPaikkain
-    return JsonPaikkain
-    # def json_paikkain
+  @property
+  def data_alkutilanne(self):
+    return {'id': self.object.pk}
 
-  @classmethod
-  def __init_subclass__(cls, *args, **kwargs):
-    super().__init_subclass__(*args, **kwargs)
-    cls.websocket = json_viestiliikenne(
-      cls.websocket,
-      loads={'cls': cls.json_latain},
-      dumps={'cls': cls.json_koodain},
-    )
-    # def __init_subclass__
-
-  def __init__(self, *args, **kwargs):
-    # pylint: disable=unidiomatic-typecheck
-    if type(self) is __class__:
-      raise TypeError('Synkroni-luokka on abstrakti!')
-    super().__init__(*args, **kwargs)
-    # def __init__
-
-  @cached_property
-  def data(self):
-    return SimpleNamespace(**self.object.data)
-    # def data
-
-  async def data_paivitetty(self, vanha_data, uusi_data):
-    # pylint: disable=no-member
-    muutos = self.json_paikkain.from_diff(
-      vanha_data, uusi_data
-    ).patch
-    assert isinstance(muutos, (list, dict))
-    if muutos:
-      await self.request.send(muutos)
-    # async def data_paivitetty
+  #@cached_property
+  #def data(self):
+  #  '''
+  #  Tarjotaan data sanakirjan sijaan nimiavaruutena:
+  #  self.data.xyz = 'abc' jne.
+  #  '''
+  #  return SimpleNamespace(**self.object.data)
+  #  # def data
 
   async def kasittele_saapuva_sanoma(self, request, sanoma):
-    if 'komento_id' in sanoma:
-      # Komento.
-      try:
-        vastaus = await self.suorita_komento(**sanoma)
-      # pylint: disable=broad-except
-      except Exception as exc:
-        traceback.print_exc()
-        await request.send({
-          'virhe': str(exc),
-        })
-      else:
-        if vastaus is not None:
-          await request.send({
-            'komento_id': sanoma['komento_id'],
-            **vastaus
-          })
-
-    else:
-      # Json-paikkaus.
+    ''' Toteuta saapuva muutos self.data.__dictiä__ vasten. '''
+    if 'komento_id' not in sanoma:
       sanoma = sanoma if isinstance(sanoma, list) else [sanoma]
       # pylint: disable=no-value-for-parameter
       # pylint: disable=too-many-function-args
       self.json_paikkain(sanoma).apply(
-        self.data.__dict__, in_place=True
+        self.data, #.__dict__,
+        in_place=True
       )
+    else:
+      await super().kasittele_saapuva_sanoma(request, sanoma)
     # async def kasittele_saapuva_sanoma
 
-  # Toteutetaan __init_subclass__-metodissa.
-  #@json_viestiliikenne
-  @csrf_tarkistus(
-    csrf_avain='csrfmiddlewaretoken',
-    virhe_avain='virhe'
-  )
-  async def websocket(self, request, *args, **kwargs):
+  async def _websocket(self, request, *args, **kwargs):
     '''
     Alusta self.object.
 
@@ -143,7 +90,7 @@ class Synkroni(SingleObjectMixin, WebsocketNakyma):
     if self._websocket_kattely.get('uusi'):
       await self.data_paivitetty(
         self.data_alkutilanne,
-        self.data.__dict__,
+        self.data, #.__dict__,
       )
 
     try:
@@ -164,7 +111,7 @@ class Synkroni(SingleObjectMixin, WebsocketNakyma):
 
     finally:
       # Tallenna data automaattisesti ennen yhteyden katkaisua.
-      self.object.data = self.data.__dict__
+      self.object.data = self.data #.__dict__
       await asyncio.shield(sync_to_async(self.object.save)())
     # async def websocket
 

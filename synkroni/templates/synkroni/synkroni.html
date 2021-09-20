@@ -1,47 +1,40 @@
 {% load i18n static %}
 
-{% block html %}
-  <form style="display: none" id="kattely">
-    {% csrf_token %}
-    <input type="checkbox" name="uusi" checked/>
-  </form>
-{% endblock html %}
+{% if not request.websocket %}
+  <script>
+    alert("{% trans "Ei Websocket-yhteyttä!" %}");
+  </script>
+{% endif %}
 
-{% block js %}
+{% if view.kaksisuuntainen %}
   <script
     src="https://cdn.jsdelivr.net/gh/Palindrom/JSONPatcherProxy@0.0.10/dist/jsonpatcherproxy.min.js"
     ></script>
-  <script
-    src="https://cdn.jsdelivr.net/gh/bruth/jsonpatch-js@0.7.0/jsonpatch.js"
-    ></script>
-  <script
-    src="{% static "synkroni/js/synkroni.js" %}"
-    ></script>
+{% endif %}
 
-  <script>
-    (function () {
-      {% if not request.websocket %}
-        alert("{% trans "Ei Websocket-yhteyttä!" %}");
-        return;
-      {% endif %}
-      document.synkroni = new Synkroni(
-        // Websocket-yhteysosoite.
-        "{{ request.websocket }}{{ request.path }}",
-        function (e) {
-          // Kättelydata yhteyden avaamisen yhteydessä.
-          let kattely = document.getElementById("kattely");
-          let data = JSON.stringify(
-            Object.fromEntries(
-              new FormData(kattely)
-            )
-          );
-          // Poista `uusi` kättelydatasta
-          kattely.querySelector("[name=uusi]")?.remove?.();
-          return data;
-        },
-        // Palvelimen kanssa synkronoitavan datan alkutilanne.
-        {{ view.data_alkutilanne|safe }}
-      );
-    })();
-  </script>
-{% endblock js %}
+<script
+  src="https://cdn.jsdelivr.net/gh/bruth/jsonpatch-js@0.7.0/jsonpatch.js"
+  ></script>
+
+<script
+  src="{% static "synkroni/js/synkroni.js" %}"
+  {# Websocket-yhteysosoite. #}
+  data-websocket="{{ request.websocket }}{{ request.path }}"
+  data-kattely='{"csrfmiddlewaretoken": "{{ csrf_token }}", "uusi": true}'
+  data-alkutila="{{ view.data_alkutilanne|safe }}"
+  ></script>
+
+<script>
+  /*
+   * Poistetaan `uusi`-lippu kättelydatasta,
+   * kun yhteys on ensimmäisen kerran alustettu.
+   *
+   * Tällöin seuraavat yhteydenmuodostukset eivät
+   * tuo alkutilanteen dataa palvelimelta.
+   */
+  document.addEventListener("yhteys-alustettu", function (e) {
+    let kattely = JSON.parse(document.synkroni.kattely);
+    delete kattely.uusi;
+    document.synkroni.kattely = JSON.stringify(kattely);
+  }, false);
+</script>
