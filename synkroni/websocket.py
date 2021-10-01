@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import asyncio
 import functools
 import json
 import traceback
@@ -14,7 +15,7 @@ from pistoke.tyokalut import csrf_tarkistus, json_viestiliikenne
 
 class WebsocketYhteys(WebsocketNakyma):
 
-  # Datan alkutila sellaisena kuin sekä palvelin että selain
+  # Datan alkutilanne sellaisena kuin sekä palvelin että selain
   # sen näkevät.
   data_alkutilanne = {}
 
@@ -55,11 +56,16 @@ class WebsocketYhteys(WebsocketNakyma):
     # def json_paikkain
 
   def __init__(self, *args, **kwargs):
-    ''' Estetään tämän saateluokan olion luonti. '''
+    '''
+    Estetään tämän saateluokan suora yksilöinti.
+
+    Alustetaan self.komennot: tyhjä joukko.
+    '''
     # pylint: disable=unidiomatic-typecheck
     if type(self) is __class__:
       raise TypeError(f'{__class__} on abstrakti!')
     super().__init__(*args, **kwargs)
+    self.komennot = set()
     # def __init__
 
   async def data_paivitetty(self, vanha_data, uusi_data):
@@ -73,27 +79,39 @@ class WebsocketYhteys(WebsocketNakyma):
       await self.request.send(muutos)
     # async def data_paivitetty
 
+  async def kasittele_komento(self, request, *, komento_id, **kwargs):
+    try:
+      vastaus = await self.suorita_toiminto(**kwargs)
+    # pylint: disable=broad-except
+    except Exception as exc:
+      traceback.print_exc()
+      await request.send({
+        'virhe': str(exc),
+      })
+    else:
+      if vastaus is not None:
+        await request.send({
+          'komento_id': komento_id,
+          **vastaus
+        })
+        # if vastaus is not None
+      # else
+    # async def kasittele_komento
+
   async def kasittele_saapuva_sanoma(self, request, sanoma):
     ''' Käsittele selaimelta saapuva sanoma. '''
     if 'komento_id' in sanoma:
-      # Komento: suorita.
-      try:
-        vastaus = await self.suorita_toiminto(**sanoma)
-      # pylint: disable=broad-except
-      except Exception as exc:
-        traceback.print_exc()
-        await request.send({
-          'virhe': str(exc),
-        })
-      else:
-        if vastaus is not None:
-          await request.send({
-            'komento_id': sanoma['komento_id'],
-            **vastaus
-          })
+      # Komento: suorita taustalla.
+      # Useat peräkkäin saapuvat komennot ajetaan samanaikaisesti.
+      komento = asyncio.ensure_future(
+        self.kasittele_komento(request, **sanoma)
+      )
+      self.komennot.add(komento)
 
     else:
-      # Json-paikkaus: toteuta.
+      # Json-paikkaus: toteuta tässä.
+      # Huomaa, että paikkaukset on toteutettava peräkkäin
+      # saapumisjärjestyksessä, ei samanaikaisesti.
       sanoma = sanoma if isinstance(sanoma, list) else [sanoma]
       # pylint: disable=no-value-for-parameter
       # pylint: disable=too-many-function-args
@@ -110,10 +128,17 @@ class WebsocketYhteys(WebsocketNakyma):
     tämän metodin suoritus on käärittävä `json_viestiliikenne`-
     funktion tuottamaan kääreeseen ajon aikana.
     '''
-    while True:
-      sanoma = await request.receive()
-      await self.kasittele_saapuva_sanoma(request, sanoma)
-      # while True
+    try:
+      while True:
+        sanoma = await request.receive()
+        await self.kasittele_saapuva_sanoma(request, sanoma)
+        # while True
+    finally:
+      for kesken in self.komennot:
+        kesken.cancel()
+      await asyncio.gather(*self.komennot)
+      # finally
+    # async def _websocket
 
   async def websocket(self, request, *args, **kwargs):
     ''' JSON-ohjaimet valitaan pyyntökohtaisesti. '''
