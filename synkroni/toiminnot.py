@@ -56,7 +56,8 @@ class Toiminnot:
     return await _toiminto
 
   @toiminto
-  async def alustus_valmis(self):
+  async def yhteys_alustettu(self):
+    ''' Yhteyskokeilu. '''
     return {}
 
   # class Toiminnot

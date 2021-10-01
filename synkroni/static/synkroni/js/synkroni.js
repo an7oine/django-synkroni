@@ -23,16 +23,6 @@
     }
 
     this._avaaYhteys();
-
-    // Jätä jonoon yhteyskokeilu palvelimelle.
-    // Paluusanoman yhteydessä merkitään yhteys avatuksi.
-    this.komento({
-      alustus_valmis: {},
-    }, function () {
-      document.dispatchEvent(
-        new Event("yhteys-alustettu")
-      );
-    });
   }
 
   Object.assign(Synkroni.prototype, {
@@ -55,6 +45,16 @@
       document.dispatchEvent(
         new Event("yhteys-avattu")
       );
+
+      // Jätä jonoon yhteyskokeilu palvelimelle.
+      // Paluusanoman yhteydessä merkitään yhteys avatuksi.
+      this.komento({
+        yhteys_alustettu: {},
+      }, function () {
+        document.dispatchEvent(
+          new Event("yhteys-alustettu")
+        );
+      });
     },
     _yhteysKatkaistu: function (e) {
       document.dispatchEvent(
@@ -76,7 +76,7 @@
         alert(data.virhe || "Tuntematon palvelinvirhe");
       }
       else if (data.hasOwnProperty("komento_id")) {
-        this.komennot[data.komento_id](data);
+        this.komennot[data.komento_id]?.(data);
         delete this.komennot[data.komento_id];
       }
       else {
