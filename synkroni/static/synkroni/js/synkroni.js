@@ -6,11 +6,14 @@
 
   function Synkroni() {
     this.osoite = websocket;
-    this.kattely = kattely;
     this.komennot = {};
     this.yhteys = null;
     this.komento_id = 0;
     this.lahetysjono = [];
+
+    this.kattely = JSON.parse(
+      kattely? kattely.replace(/'/g, '"') : "{}"
+    );
     this.data = JSON.parse(
       alkutila? alkutila.replace(/'/g, '"') : "{}"
     );
@@ -37,7 +40,7 @@
       });
     },
     _yhteysAvattu: function (e) {
-      this.yhteys.send(this.kattely);
+      this.yhteys.send(JSON.stringify(this.kattely));
       for (lahteva_sanoma of this.lahetysjono) {
         this._lahetaData(lahteva_sanoma);
       }
@@ -48,13 +51,19 @@
 
       // Jätä jonoon yhteyskokeilu palvelimelle.
       // Paluusanoman yhteydessä merkitään yhteys avatuksi.
+      // Ensimmäisen alustuksen jälkeen avain `uusi` poistetaan
+      // kättelydatasta.
       this.komento({
         yhteys_alustettu: {},
       }, function () {
+        const uusi = this.kattely.uusi;
+        if (uusi) {
+          delete this.kattely.uusi;
+        }
         document.dispatchEvent(
-          new Event("yhteys-alustettu")
+          new CustomEvent("yhteys-alustettu", {detail: {uusi: uusi}})
         );
-      });
+      }.bind(this));
     },
     _yhteysKatkaistu: function (e) {
       document.dispatchEvent(

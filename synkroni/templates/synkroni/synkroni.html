@@ -7,6 +7,7 @@
 {% endif %}
 
 {% if view.kaksisuuntainen %}
+  {# Kaksisuuntainen tiedonsiirto edellyttää JSON-patcherproxy-komentosarjan käyttöä. #}
   <script
     src="https://cdn.jsdelivr.net/gh/Palindrom/JSONPatcherProxy@0.0.10/dist/jsonpatcherproxy.min.js"
     ></script>
@@ -23,18 +24,3 @@
   data-kattely='{"csrfmiddlewaretoken": "{{ csrf_token }}", "uusi": true}'
   data-alkutila="{{ view.data_alkutilanne|safe }}"
   ></script>
-
-<script>
-  /*
-   * Poistetaan `uusi`-lippu kättelydatasta,
-   * kun yhteys on ensimmäisen kerran alustettu.
-   *
-   * Tällöin seuraavat yhteydenmuodostukset eivät
-   * tuo alkutilanteen dataa palvelimelta.
-   */
-  document.addEventListener("yhteys-alustettu", function (e) {
-    let kattely = JSON.parse(document.synkroni.kattely);
-    delete kattely.uusi;
-    document.synkroni.kattely = JSON.stringify(kattely);
-  }, false);
-</script>
