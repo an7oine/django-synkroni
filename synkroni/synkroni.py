@@ -2,12 +2,11 @@
 
 import asyncio
 import json
-# from types import SimpleNamespace
 
 from asgiref.sync import sync_to_async
 
 from django.utils.functional import (
-  # cached_property,
+  cached_property,
   classproperty,
 )
 from django.views.generic.detail import SingleObjectMixin
@@ -23,7 +22,11 @@ class Synkroni(SingleObjectMixin, WebsocketYhteys):
   JSON-protokolla poimitaan tietomallin `data`-kentän määritysten mukaan.
 
   Alkutilanteessa data on `{"id": ...}`.
+
+  Ensimmäisen synkronoinnin yhteydessä dataksi vaihtuu kuitenkin
+  todellinen tietokantarivin sisältö.
   '''
+  # pylint: disable=abstract-method
 
   # Tietokantamalli, jonka tietty, yksittäinen rivi toimii
   # tietovarastona, johon selain synkronoidaan.
@@ -31,9 +34,6 @@ class Synkroni(SingleObjectMixin, WebsocketYhteys):
 
   # Tiedot synkronoidaan myös selaimelta palvelimelle päin.
   kaksisuuntainen = True
-
-  async def suorita_toiminto(self, **kwargs):
-    raise NotImplementedError
 
   @classproperty
   def json_koodain(cls):
@@ -49,28 +49,13 @@ class Synkroni(SingleObjectMixin, WebsocketYhteys):
   def data_alkutilanne(self):
     return {'id': self.object.pk}
 
-  #@cached_property
-  #def data(self):
-  #  '''
-  #  Tarjotaan data sanakirjan sijaan nimiavaruutena:
-  #  self.data.xyz = 'abc' jne.
-  #  '''
-  #  return SimpleNamespace(**self.object.data)
-  #  # def data
-
-  async def kasittele_saapuva_sanoma(self, request, sanoma):
-    ''' Toteuta saapuva muutos self.data.__dictiä__ vasten. '''
-    if 'komento_id' not in sanoma:
-      sanoma = sanoma if isinstance(sanoma, list) else [sanoma]
-      # pylint: disable=no-value-for-parameter
-      # pylint: disable=too-many-function-args
-      self.json_paikkain(sanoma).apply(
-        self.data, #.__dict__,
-        in_place=True
-      )
-    else:
-      await super().kasittele_saapuva_sanoma(request, sanoma)
-    # async def kasittele_saapuva_sanoma
+  @cached_property
+  def data(self):
+    '''
+    Käsitellään synkronoitavan mallin dataa sellaisenaan.
+    '''
+    return self.object.data
+    # def data
 
   async def _websocket(self, request, *args, **kwargs):
     '''
@@ -90,7 +75,7 @@ class Synkroni(SingleObjectMixin, WebsocketYhteys):
     if self._websocket_kattely.get('uusi'):
       await self.data_paivitetty(
         self.data_alkutilanne,
-        self.data, #.__dict__,
+        self.data,
       )
 
     try:
@@ -111,8 +96,7 @@ class Synkroni(SingleObjectMixin, WebsocketYhteys):
 
     finally:
       # Tallenna data automaattisesti ennen yhteyden katkaisua.
-      self.object.data = self.data #.__dict__
       await asyncio.shield(sync_to_async(self.object.save)())
-    # async def websocket
+    # async def _websocket
 
   # class Synkroni
