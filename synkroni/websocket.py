@@ -6,6 +6,7 @@ import json
 import traceback
 
 from django.utils.functional import cached_property, classproperty
+from django.utils.html import escape
 
 from jsonpatch import JsonPatch, multidict
 
@@ -67,6 +68,20 @@ class WebsocketYhteys(WebsocketNakyma):
     super().__init__(*args, **kwargs)
     self.komennot = set()
     # def __init__
+
+  def data_alkutilanne_json(self):
+    ''' Palauta JSON-muotoinen datan alkutilanne. '''
+    return escape(self.json_koodain().encode(
+      self.data_alkutilanne
+    ))
+    # def data_alkutilanne_json
+
+  def websocket_protokolla_json(self):
+    ''' Palauta JSON-muotoinen tuettujen protokollien luettelo. '''
+    return escape(self.json_koodain().encode(
+      self.websocket.protokolla
+    ))
+    # def websocket_protokolla_json
 
   async def data_paivitetty(self, vanha_data, uusi_data):
     ''' Vertaa vanhaa ja uutta dataa; lähetä muutokset selaimelle. '''
@@ -159,5 +174,6 @@ class WebsocketYhteys(WebsocketNakyma):
       # async def websocket
     return await websocket(self, request, *args, **kwargs)
     # def websocket
+  websocket.protokolla = 'django-synkroni'
 
   # class WebsocketYhteys

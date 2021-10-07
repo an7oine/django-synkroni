@@ -2,10 +2,16 @@
   /*
    * Luo Websocket-palvelinyhteys.
    */
-  const {websocket, kattely, alkutila} = document.currentScript.dataset;
+  const {
+    websocket,
+    protokolla,
+    kattely,
+    alkutila
+  } = document.currentScript.dataset;
 
   function Synkroni() {
     this.osoite = websocket;
+    this.protokolla = JSON.parse(protokolla ?? "null");
     this.komennot = {};
     this.yhteys = null;
     this.komento_id = 0;
@@ -32,7 +38,7 @@
     MAKSIMIDATA: 1024 * 1024,
 
     _avaaYhteys: function () {
-      this.yhteys = new WebSocket(this.osoite);
+      this.yhteys = new WebSocket(this.osoite, this.protokolla);
       Object.assign(this.yhteys, {
         onopen: this._yhteysAvattu.bind(this),
         onmessage: this._viestiVastaanotettu.bind(this),

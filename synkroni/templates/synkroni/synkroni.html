@@ -21,6 +21,7 @@
   src="{% static "synkroni/js/synkroni.js" %}"
   {# Websocket-yhteysosoite. #}
   data-websocket="{{ request.websocket }}{{ request.path }}"
+  data-protokolla="{{ view.websocket_protokolla_json }}"
   data-kattely='{"csrfmiddlewaretoken": "{{ csrf_token }}", "uusi": true}'
-  data-alkutila="{{ view.data_alkutilanne|safe }}"
+  data-alkutila="{{ view.data_alkutilanne_json }}"
   ></script>
