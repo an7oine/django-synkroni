@@ -87,7 +87,13 @@
     },
     _viestiVastaanotettu: function (e) {
       let data = JSON.parse(e.data);
-      if (data.hasOwnProperty("virhe")) {
+      if (data.hasOwnProperty("status")) {
+        this.yhteys.close();
+        if (confirm("Palvelinyhteyden muodostus epäonnistui. Yritetäänkö uudelleen?")) {
+          location.reload();
+        }
+      }
+      else if (data.hasOwnProperty("virhe")) {
         alert(data.virhe || "Tuntematon palvelinvirhe");
       }
       else if (data.hasOwnProperty("komento_id")) {
