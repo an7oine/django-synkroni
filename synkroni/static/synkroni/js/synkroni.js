@@ -38,7 +38,7 @@
     MAKSIMIDATA: 1024 * 1024,
 
     _avaaYhteys: function () {
-      this.yhteys = new WebSocket(this.osoite, this.protokolla);
+      this.yhteys = new WebSocket(this.osoite, this.protokolla || undefined);
       Object.assign(this.yhteys, {
         onopen: this._yhteysAvattu.bind(this),
         onmessage: this._viestiVastaanotettu.bind(this),

@@ -78,6 +78,8 @@ class WebsocketYhteys(WebsocketNakyma):
 
   def websocket_protokolla_json(self):
     ''' Palauta JSON-muotoinen tuettujen protokollien luettelo. '''
+    if not getattr(self.websocket, 'protokolla', None):
+      return 'null'
     return escape(self.json_koodain().encode(
       self.websocket.protokolla
     ))
