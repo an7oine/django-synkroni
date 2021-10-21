@@ -12,7 +12,7 @@ def toiminto(*args, **kwargs):
   if not kwargs:
     uusi_toiminto, = args
     toiminto._toiminnot.append(uusi_toiminto)
-    return None
+    return uusi_toiminto
   try:
     return next((
       metodi(
@@ -24,7 +24,7 @@ def toiminto(*args, **kwargs):
     ))
   except StopIteration:
     # pylint: disable=raise-missing-from
-    raise ValueError(', '.join(kwargs))
+    raise ValueError('Tuntematon toiminto: ' + ', '.join(kwargs))
   # def toiminto
 
 
@@ -51,13 +51,17 @@ class Toiminnot:
     # def _toiminto
 
   async def suorita_toiminto(self, **kwargs):
+    if not kwargs:
+      raise ValueError('Toiminnon tiedot puuttuvat: %r' % kwargs)
     _toiminto = self._toiminto(**kwargs)
     assert inspect.isawaitable(_toiminto)
     return await _toiminto
+    # async def suorita_toiminto
 
   @toiminto
   async def yhteys_alustettu(self):
     ''' Yhteyskokeilu. '''
     return {}
+    # async def yhteys_alustettu
 
   # class Toiminnot
