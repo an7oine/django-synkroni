@@ -60,13 +60,13 @@ class WebsocketYhteys(WebsocketNakyma):
     '''
     Estetään tämän saateluokan suora yksilöinti.
 
-    Alustetaan self.komennot: tyhjä joukko.
+    Alustetaan self.toimintojono: tyhjä joukko.
     '''
     # pylint: disable=unidiomatic-typecheck
     if type(self) is __class__:
       raise TypeError(f'{__class__} on abstrakti!')
     super().__init__(*args, **kwargs)
-    self.komennot = set()
+    self.toimintojono = set()
     # def __init__
 
   def data_alkutilanne_json(self):
@@ -96,7 +96,7 @@ class WebsocketYhteys(WebsocketNakyma):
       await self.request.send(muutos)
     # async def data_paivitetty
 
-  async def kasittele_komento(self, request, *, komento_id, **kwargs):
+  async def kasittele_toiminto(self, request, *, toiminto_id, **kwargs):
     try:
       vastaus = await self.suorita_toiminto(**kwargs)
     # pylint: disable=broad-except
@@ -108,22 +108,22 @@ class WebsocketYhteys(WebsocketNakyma):
     else:
       if vastaus is not None:
         await request.send({
-          'komento_id': komento_id,
+          'toiminto_id': toiminto_id,
           **vastaus
         })
         # if vastaus is not None
       # else
-    # async def kasittele_komento
+    # async def kasittele_toiminto
 
   async def kasittele_saapuva_sanoma(self, request, sanoma):
     ''' Käsittele selaimelta saapuva sanoma. '''
-    if 'komento_id' in sanoma:
+    if 'toiminto_id' in sanoma:
       # Komento: suorita taustalla.
-      # Useat peräkkäin saapuvat komennot ajetaan samanaikaisesti.
-      komento = asyncio.ensure_future(
-        self.kasittele_komento(request, **sanoma)
+      # Useat peräkkäin saapuvat toiminnot ajetaan samanaikaisesti.
+      toiminto = asyncio.ensure_future(
+        self.kasittele_toiminto(request, **sanoma)
       )
-      self.komennot.add(komento)
+      self.toimintojono.add(toiminto)
 
     else:
       # Json-paikkaus: toteuta tässä.
@@ -139,7 +139,7 @@ class WebsocketYhteys(WebsocketNakyma):
 
   async def _websocket(self, request, *args, **kwargs):
     '''
-    Vastaanota ja toteuta saapuvat JSON-paikkaukset ja komennot.
+    Vastaanota ja toteuta saapuvat JSON-paikkaukset ja toiminnot.
 
     Huomaa, että luku ja kirjoitus tapahtuu JSON-muodossa;
     tämän metodin suoritus on käärittävä `json_viestiliikenne`-
@@ -151,9 +151,9 @@ class WebsocketYhteys(WebsocketNakyma):
         await self.kasittele_saapuva_sanoma(request, sanoma)
         # while True
     finally:
-      for kesken in self.komennot:
+      for kesken in self.toimintojono:
         kesken.cancel()
-      await asyncio.gather(*self.komennot)
+      await asyncio.gather(*self.toimintojono)
       # finally
     # async def _websocket
 

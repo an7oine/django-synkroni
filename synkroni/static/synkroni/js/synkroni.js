@@ -12,24 +12,28 @@
   function Synkroni() {
     this.osoite = websocket;
     this.protokolla = JSON.parse(protokolla ?? "null");
-    this.komennot = {};
+    this.toimintojono = {};
     this.yhteys = null;
-    this.komento_id = 0;
+    this.toiminto_id = 0; // Seuraava käyttämätön toiminto-id.
     this.lahetysjono = [];
-
     this.kattely = JSON.parse(
       kattely? kattely.replace(/'/g, '"') : "{}"
     );
-    this.data = JSON.parse(
+
+    // Alusta `document.toiminto`.
+    document.toiminto = this.toiminto.bind(this);
+
+    // Alusta `document.data`.
+    let data = JSON.parse(
       alkutila? alkutila.replace(/'/g, '"') : "{}"
     );
-
     if (window.JSONPatcherProxy) {
-      this.tarkkailija = new JSONPatcherProxy(this.data);
-      this.data = this.tarkkailija.observe(
+      this.tarkkailija = new JSONPatcherProxy(data);
+      data = this.tarkkailija.observe(
         true, this._lahtevaMuutos.bind(this)
       );
     }
+    document.data = data;
 
     this._avaaYhteys();
   }
@@ -59,7 +63,7 @@
       // Paluusanoman yhteydessä merkitään yhteys avatuksi.
       // Ensimmäisen alustuksen jälkeen avain `uusi` poistetaan
       // kättelydatasta.
-      this.komento({
+      this.toiminto({
         yhteys_alustettu: {},
       }, function () {
         const uusi = this.kattely.uusi;
@@ -96,9 +100,9 @@
       else if (data.hasOwnProperty("virhe")) {
         alert(data.virhe || "Tuntematon palvelinvirhe");
       }
-      else if (data.hasOwnProperty("komento_id")) {
-        this.komennot[data.komento_id]?.(data);
-        delete this.komennot[data.komento_id];
+      else if (data.hasOwnProperty("toiminto_id")) {
+        this.toimintojono[data.toiminto_id]?.(data);
+        delete this.toimintojono[data.toiminto_id];
       }
       else {
         this._saapuvaMuutos(data);
@@ -141,17 +145,17 @@
     },
     _saapuvaMuutos: function (p) {
       this.tarkkailija?.pause?.();
-      jsonpatch.apply(this.data, p);
+      jsonpatch.apply(document.data, p);
       this.tarkkailija?.resume?.();
       document.dispatchEvent(
         new Event("data-paivitetty")
       );
     },
 
-    komento: function (data, vastaus) {
-      data.komento_id = ++this.komento_id;
+    toiminto: function (data, vastaus) {
+      data.toiminto_id = ++this.toiminto_id;
       if (typeof vastaus === "function") {
-        this.komennot[data.komento_id] = vastaus;
+        this.toimintojono[data.toiminto_id] = vastaus;
       }
       if (this.yhteys?.readyState === 1) {
         this._lahetaData(data);
