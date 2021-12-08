@@ -77,7 +77,7 @@
     },
     _yhteysKatkaistu: function (e) {
       document.dispatchEvent(
-        new Event("yhteys-katkaistu")
+        new CustomEvent("yhteys-katkaistu", {detail: e})
       );
 
       // Poista aiempi yhteys.
