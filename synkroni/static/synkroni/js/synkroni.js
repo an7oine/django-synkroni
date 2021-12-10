@@ -173,6 +173,47 @@
         osat[i] = jono.substr(o, koko);
       }
       return osat;
+    },
+
+    /*
+     * Vie `document.data` JSON-tiedostoon.
+     */
+    vieData: function () {
+      var json = JSON.stringify(document.data);
+      var a = document.createElement("a");
+      document.body.appendChild(a);
+      a.style = "display: none";
+      a.href = window.URL.createObjectURL(new Blob(
+        [json],
+        {type: "application/json"}
+      ));
+      a.download = "data.json";
+      a.click();
+      window.URL.revokeObjectURL(a.href);
+    },
+
+    /*
+     * Tuo `document.data` JSON-tiedostosta.
+     */
+    tuoData: function () {
+      var input = document.createElement("input");
+      document.body.appendChild(input);
+      input.type = "file";
+      input.style = "display: none";
+      input.onchange = function (e) {
+        let fr = new FileReader();
+        fr.onload = function () {
+          document.data = JSON.parse(fr.result);
+          document.dispatchEvent(new Event("yhteys-avattu"));
+          document.dispatchEvent(new CustomEvent(
+            "yhteys-alustettu",
+            {detail: {uusi: true}}
+          ));
+          document.dispatchEvent(new Event("data-paivitetty"));
+        };
+        fr.readAsBinaryString(e.target.files[0]);
+      };
+      input.click();
     }
   });
 
