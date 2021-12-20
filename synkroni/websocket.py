@@ -103,6 +103,7 @@ class WebsocketYhteys(WebsocketNakyma):
     except Exception as exc:
       traceback.print_exc()
       await request.send({
+        'toiminto_id': toiminto_id,
         'virhe': str(exc),
       })
     else:

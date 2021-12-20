@@ -12,7 +12,7 @@
   function Synkroni() {
     this.osoite = websocket;
     this.protokolla = JSON.parse(protokolla ?? "null");
-    this.toimintojono = {};
+    this.toimintojono = {}; // toiminto_id: {vastaus, virhe}
     this.yhteys = null;
     this.toiminto_id = 0; // Seuraava käyttämätön toiminto-id.
     this.lahetysjono = [];
@@ -65,7 +65,7 @@
       // kättelydatasta.
       this.toiminto({
         yhteys_alustettu: {},
-      }, function () {
+      }).then(function (data) {
         const uusi = this.kattely.uusi;
         if (uusi) {
           delete this.kattely.uusi;
@@ -97,12 +97,16 @@
           location.reload();
         }
       }
+      else if (data.hasOwnProperty("toiminto_id")) {
+        const {vastaus, virhe} = this.toimintojono[data.toiminto_id];
+        if (data.hasOwnProperty("virhe"))
+          virhe(data);
+        else
+          vastaus(data);
+        delete this.toimintojono[data.toiminto_id];
+      }
       else if (data.hasOwnProperty("virhe")) {
         alert(data.virhe || "Tuntematon palvelinvirhe");
-      }
-      else if (data.hasOwnProperty("toiminto_id")) {
-        this.toimintojono[data.toiminto_id]?.(data);
-        delete this.toimintojono[data.toiminto_id];
       }
       else {
         this._saapuvaMuutos(data);
@@ -152,18 +156,23 @@
       );
     },
 
-    toiminto: function (data, vastaus) {
+    toiminto: function (data) {
       data.toiminto_id = ++this.toiminto_id;
-      if (typeof vastaus === "function") {
-        this.toimintojono[data.toiminto_id] = vastaus;
-      }
-      if (this.yhteys?.readyState === 1) {
-        this._lahetaData(data);
-      }
-      else {
-        // Jätä sanoma jonoon, mikäli yhteyttä ei ole.
-        this.lahetysjono.push(data);
-      }
+      return new Promise(function (vastaus, virhe) {
+        this.toimintojono[data.toiminto_id] = {
+          vastaus: typeof vastaus === "function"? vastaus : function () {},
+          virhe: typeof virhe === "function"? virhe : function (data) {
+            alert(data.virhe ?? "Tuntematon palvelinvirhe");
+          }
+        }
+        if (this.yhteys?.readyState === 1) {
+          this._lahetaData(data);
+        }
+        else {
+          // Jätä sanoma jonoon, mikäli yhteyttä ei ole.
+          this.lahetysjono.push(data);
+        }
+      }.bind(this));
     },
 
     _patkiOsiin: function (jono, koko) {
