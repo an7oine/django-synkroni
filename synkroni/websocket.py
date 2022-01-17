@@ -154,7 +154,13 @@ class WebsocketYhteys(WebsocketNakyma):
     finally:
       for kesken in self.toimintojono:
         kesken.cancel()
-      await asyncio.gather(*self.toimintojono)
+      tulokset = await asyncio.gather(
+        *self.toimintojono,
+        return_exceptions=True
+      )
+      for tulos in tulokset:
+        if isinstance(tulos, BaseException):
+          raise tulos
       # finally
     # async def _websocket
 
