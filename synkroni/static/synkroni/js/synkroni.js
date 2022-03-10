@@ -184,6 +184,10 @@
       return osat;
     },
 
+    yhdistaUudelleen: function () {
+      return this._avaaYhteys();
+    },
+
     /*
      * Vie `document.data` JSON-tiedostoon.
      */
