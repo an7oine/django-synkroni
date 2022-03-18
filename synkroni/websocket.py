@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
+import copy
 import functools
 import json
 import traceback
@@ -27,7 +28,7 @@ class WebsocketYhteys(WebsocketNakyma):
   # palvelimella kuin selaimellakin.
   @cached_property
   def data(self):
-    return {}
+    return copy.deepcopy(self.data_alkutilanne)
 
   # Selaimelta saapuvan toiminnon toteutus palvelimen päässä.
   # Konkreettinen toteutus: ks. `Toiminnot`-saateluokka.
