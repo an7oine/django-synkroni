@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import asyncio
 import copy
 import functools
 import inspect
@@ -31,13 +32,17 @@ def toiminto(*args, **kwargs):
 def muuttaa_tietoja(metodi):
   @functools.wraps(metodi)
   async def _metodi(self, *args, **kwargs):
-    vanha_data = copy.deepcopy(self.data)
-    try:
-      return await _metodi.__wrapped__(self, *args, **kwargs)
-    finally:
-      await self.data_paivitetty(vanha_data, self.data)
+    async with muuttaa_tietoja.lukko:
+      vanha_data = copy.deepcopy(self.data)
+      try:
+        return await _metodi.__wrapped__(self, *args, **kwargs)
+      finally:
+        await self.data_paivitetty(vanha_data, self.data)
+      # async with muuttaa_tietoja.lukko
+    # async def _metodi
   return _metodi
   # def muuttaa_tietoja
+muuttaa_tietoja.lukko = asyncio.Lock()
 
 
 class Toiminnot:
