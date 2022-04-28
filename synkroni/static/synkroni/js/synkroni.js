@@ -150,10 +150,43 @@
     _saapuvaMuutos: function (p) {
       this.tarkkailija?.pause?.();
       jsonpatch.apply(document.data, p);
+      this._tulkitseVierasavaimet(document.data);
       this.tarkkailija?.resume?.();
       document.dispatchEvent(
         new Event("data-paivitetty")
       );
+    },
+
+    _tulkitseVierasavaimet: function (data) {
+      for (let [avain, arvo] of Object.entries(data)) {
+        if (Array.isArray(arvo))
+          for (let rivi of arvo)
+            this._tulkitseVierasavaimet(rivi);
+        else if (typeof arvo !== 'object' || arvo === null)
+          ;
+        else if (arvo.hasOwnProperty("__vierasavain__")) {
+          let [vierasavain, vierasavain_id] = arvo.__vierasavain__;
+          let sisainen = vierasavain_id == "id";
+          let vierasdata = (
+            sisainen
+            ? arvo.id
+            : data[vierasavain_id]
+          );
+          Object.defineProperty(
+            data,
+            avain,
+            {
+              get: function () {
+                return document.data[vierasavain]?.[vierasdata];
+              },
+              enumerable: sisainen,
+              configurable: false
+            }
+          );
+        }
+        else
+          this._tulkitseVierasavaimet(arvo);
+      }
     },
 
     toiminto: function (data) {
