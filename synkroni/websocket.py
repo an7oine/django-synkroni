@@ -70,13 +70,6 @@ class WebsocketYhteys(WebsocketNakyma):
     self.toimintojono = set()
     # def __init__
 
-  def data_alkutilanne_json(self):
-    ''' Palauta JSON-muotoinen datan alkutilanne. '''
-    return escape(self.json_koodain().encode(
-      self.data_alkutilanne
-    ))
-    # def data_alkutilanne_json
-
   def websocket_protokolla_json(self):
     ''' Palauta JSON-muotoinen tuettujen protokollien luettelo. '''
     if not getattr(self.websocket, 'protokolla', None):

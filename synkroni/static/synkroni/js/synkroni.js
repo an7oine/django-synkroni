@@ -6,7 +6,6 @@
     websocket,
     protokolla,
     kattely,
-    alkutila
   } = document.currentScript.dataset;
 
   function Synkroni() {
@@ -38,7 +37,7 @@
 
     // Alusta `document.data`.
     let data = JSON.parse(
-      alkutila? alkutila.replace(/'/g, '"') : "{}"
+      document.getElementById("synkroni-alkutilanne").textContent
     );
     if (window.JSONPatcherProxy) {
       this.tarkkailija = new JSONPatcherProxy(data);

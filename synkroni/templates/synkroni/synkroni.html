@@ -17,11 +17,12 @@
   src="https://cdn.jsdelivr.net/gh/bruth/jsonpatch-js@0.7.0/jsonpatch.js"
   ></script>
 
+{{ view.data_alkutilanne|json_script:"synkroni-alkutilanne" }}
+
 <script
   src="{% static "synkroni/js/synkroni.js" %}"
   {# Websocket-yhteysosoite. #}
   data-websocket="{{ request.websocket }}{{ request.path }}"
   data-protokolla="{{ view.websocket_protokolla_json }}"
   data-kattely='{"csrfmiddlewaretoken": "{{ csrf_token }}", "uusi": true}'
-  data-alkutila="{{ view.data_alkutilanne_json }}"
   ></script>
