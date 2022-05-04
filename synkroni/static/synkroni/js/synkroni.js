@@ -20,8 +20,21 @@
       kattely? kattely.replace(/'/g, '"') : "{}"
     );
 
-    // Alusta `document.toiminto`.
-    document.toiminto = this.toiminto.bind(this);
+    // Alusta `document.toiminto` siten, että
+    // `document.toiminto.X(...)` kutsuu metodia
+    // `this.toiminto({X: ...})`.
+    document.toiminto = new Proxy(this.toiminto.bind(this), {
+      get (target, prop) {
+        return new Proxy(target, {
+          apply (target, _this, args) {
+            return target.apply(_this, [{[prop]: args[0]}]);
+          }
+        });
+      },
+      apply (target, _this, args) {
+        return target.apply(_this, args);
+      }
+    });
 
     // Alusta `document.data`.
     let data = JSON.parse(
