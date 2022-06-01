@@ -48,6 +48,10 @@
     }
     document.data = data;
 
+    this.__vietavaData = JSON.parse(
+      document.getElementById("synkroni-alkutilanne").textContent
+    );
+
     this._avaaYhteys();
   }
 
@@ -153,6 +157,7 @@
     },
 
     _lahtevaMuutos: function (p) {
+      jsonpatch.apply(this.__vietavaData, JSON.parse(JSON.stringify(p)));
       if (this.yhteys?.readyState === 1) {
         this._lahetaData(p);
       }
@@ -164,6 +169,7 @@
     _saapuvaMuutos: function (p) {
       this.tarkkailija?.pause?.();
       jsonpatch.apply(document.data, p);
+      jsonpatch.apply(this.__vietavaData, JSON.parse(JSON.stringify(p)));
       this._tulkitseVierasavaimet(document.data);
       this.tarkkailija?.resume?.();
       document.dispatchEvent(
@@ -236,10 +242,10 @@
     },
 
     /*
-     * Vie `document.data` JSON-tiedostoon.
+     * Vie `this.__vietavaData` JSON-tiedostoon.
      */
     vieData: function () {
-      var json = JSON.stringify(document.data);
+      var json = JSON.stringify(this.__vietavaData);
       var a = document.createElement("a");
       document.body.appendChild(a);
       a.style = "display: none";
@@ -264,6 +270,7 @@
         let fr = new FileReader();
         fr.onload = function () {
           document.data = JSON.parse(fr.result);
+          document.synkroni._tulkitseVierasavaimet(document.data);
           document.dispatchEvent(new Event("yhteys-avattu"));
           document.dispatchEvent(new CustomEvent(
             "yhteys-alustettu",
