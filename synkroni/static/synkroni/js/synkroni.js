@@ -18,6 +18,7 @@
     this.kattely = JSON.parse(
       kattely? kattely.replace(/'/g, '"') : "{}"
     );
+    this.yhdistaUudelleenAutomaattisesti = false;
 
     // Alusta `document.toiminto` siten, että
     // `document.toiminto.X(...)` kutsuu metodia
@@ -82,6 +83,7 @@
         if (uusi) {
           delete this.kattely.uusi;
         }
+        this.yhdistaUudelleenAutomaattisesti = true;
         document.dispatchEvent(
           new CustomEvent("yhteys-alustettu", {detail: {uusi: uusi}})
         );
@@ -98,7 +100,7 @@
       // Yritä yhteyden muodostamista uudelleen automaattisesti,
       // mikäli yhteys katkesi muusta kuin käyttäjästä
       // johtuvasta syystä.
-      if (e.code > 1001)
+      if (this.yhdistaUudelleenAutomaattisesti && e.code > 1001)
         window.setTimeout(this._avaaYhteys.bind(this), 200);
     },
     _viestiVastaanotettu: function (e) {
