@@ -185,21 +185,32 @@
         else if (typeof arvo !== 'object' || arvo === null)
           ;
         else if (arvo.hasOwnProperty("__vierasavain__")) {
-          let [vierasavain, vierasavain_id] = arvo.__vierasavain__;
-          let sisainen = vierasavain_id == "id";
-          let vierasdata = (
-            sisainen
-            ? arvo.id
-            : data[vierasavain_id]
-          );
+          let [
+            vierasavain, vierasavain_id
+          ] = arvo.__vierasavain__;
           Object.defineProperty(
             data,
             avain,
             {
               get: function () {
-                return document.data[vierasavain]?.[vierasdata];
+                // Poimitaan vierasavain ensisijaisesti
+                // `this`-olion tiedoista.
+                // Mikäli tätä ei ole, käytetään
+                // alkuperäisen datan sisältämää arvoa.
+                if (this.hasOwnProperty(
+                  vierasavain_id
+                ))
+                  return document.data[vierasavain]?.[
+                    this[vierasavain_id]
+                  ];
+                else
+                  return document.data[vierasavain]?.[
+                    arvo[vierasavain_id]
+                  ];
               },
-              enumerable: sisainen,
+              enumerable: arvo.hasOwnProperty(
+                vierasavain_id
+              ),
               configurable: false
             }
           );
