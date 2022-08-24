@@ -104,8 +104,13 @@
       // Yritä yhteyden muodostamista uudelleen automaattisesti,
       // mikäli yhteys katkesi muusta kuin käyttäjästä
       // johtuvasta syystä.
+      // Muutoin lähetetään tästä ilmoitus dokumentin kautta.
       if (this.yhdistaUudelleenAutomaattisesti && e.code > 1001)
         window.setTimeout(this._avaaYhteys.bind(this), 200);
+      else
+        document.dispatchEvent(
+          new CustomEvent("yhteys-epaonnistui", {detail: e})
+        );
     },
     _viestiVastaanotettu: function (e) {
       let data = JSON.parse(e.data);
