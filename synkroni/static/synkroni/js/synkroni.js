@@ -59,12 +59,19 @@
     MAKSIMIDATA: 1024 * 1024,
 
     _avaaYhteys: function () {
-      this.yhteys = new WebSocket(this.osoite, this.protokolla || undefined);
-      Object.assign(this.yhteys, {
-        onopen: this._yhteysAvattu.bind(this),
-        onmessage: this._viestiVastaanotettu.bind(this),
-        onclose: this._yhteysKatkaistu.bind(this),
-      });
+      try {
+        this.yhteys = new WebSocket(this.osoite, this.protokolla || undefined);
+        Object.assign(this.yhteys, {
+          onopen: this._yhteysAvattu.bind(this),
+          onmessage: this._viestiVastaanotettu.bind(this),
+          onclose: this._yhteysKatkaistu.bind(this),
+        });
+      }
+      catch (error) {
+        document.dispatchEvent(
+          new CustomEvent("yhteys-epaonnistui", {detail: {error: error}})
+        );
+      }
     },
     _yhteysAvattu: function (e) {
       this.yhteys.send(JSON.stringify(this.kattely));
