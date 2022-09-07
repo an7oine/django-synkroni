@@ -223,7 +223,7 @@
               enumerable: arvo.hasOwnProperty(
                 vierasavain_id
               ),
-              configurable: false
+              configurable: true
             }
           );
         }
