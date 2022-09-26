@@ -129,14 +129,14 @@
       }
       else if (data.hasOwnProperty("toiminto_id")) {
         const {vastaus, virhe} = this.toimintojono[data.toiminto_id];
-        if (data.hasOwnProperty("virhe"))
-          virhe(data);
-        else
-          vastaus(data);
-        delete this.toimintojono[data.toiminto_id];
-      }
-      else if (data.hasOwnProperty("virhe")) {
-        alert(data.virhe || "Tuntematon palvelinvirhe");
+        try {
+          this.toimintoSuoritettu(vastaus, data);
+        }
+        catch (poikkeus) {
+          this.toimintoEpaonnistui(virhe, data, poikkeus);
+        } finally {
+          delete this.toimintojono[data.toiminto_id];
+        }
       }
       else {
         this._saapuvaMuutos(data);
@@ -235,12 +235,7 @@
     toiminto: function (data) {
       data.toiminto_id = ++this.toiminto_id;
       return new Promise(function (vastaus, virhe) {
-        this.toimintojono[data.toiminto_id] = {
-          vastaus: typeof vastaus === "function"? vastaus : function () {},
-          virhe: typeof virhe === "function"? virhe : function (data) {
-            alert(data.virhe ?? "Tuntematon palvelinvirhe");
-          }
-        }
+        this.toimintojono[data.toiminto_id] = {vastaus, virhe};
         if (this.yhteys?.readyState === 1) {
           this._lahetaData(data);
         }
@@ -249,6 +244,17 @@
           this.lahetysjono.push(data);
         }
       }.bind(this));
+    },
+
+    /*
+     * Helposti ylikuormitettavat metodit toiminnon vastaussanoman
+     * käsittelyyn.
+     */
+    toimintoSuoritettu: function (vastaus, data) {
+      vastaus(data);
+    },
+    toimintoEpaonnistui: function (virhe, data, poikkeus) {
+      virhe(data);
     },
 
     _patkiOsiin: function (jono, koko) {
