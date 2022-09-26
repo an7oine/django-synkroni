@@ -123,9 +123,9 @@
       let data = JSON.parse(e.data);
       if (data.hasOwnProperty("status")) {
         this.yhteys.close();
-        if (confirm("Palvelinyhteyden muodostus epäonnistui. Yritetäänkö uudelleen?")) {
-          location.reload();
-        }
+        document.dispatchEvent(
+          new CustomEvent("yhteys-virhe", {detail: data})
+        );
       }
       else if (data.hasOwnProperty("toiminto_id")) {
         const {vastaus, virhe} = this.toimintojono[data.toiminto_id];
