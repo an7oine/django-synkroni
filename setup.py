@@ -15,7 +15,7 @@ setup(
   zip_safe=False,
   install_requires=[
     'django>=3.1',
-    'django-pistoke',
+    'django-pistoke>=0.8c1',
   ],
   entry_points={
     'django.sovellus': ['synkroni = synkroni.Synkroni'],

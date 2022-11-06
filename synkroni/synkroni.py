@@ -72,7 +72,7 @@ class Synkroni(SingleObjectMixin, WebsocketYhteys):
     # pylint: disable=no-member
     self.object = await sync_to_async(self.get_object)()
 
-    if self._websocket_kattely.get('uusi'):
+    if request._csrf_kattely.get('uusi'):
       await self.data_paivitetty(
         self.data_alkutilanne,
         self.data,

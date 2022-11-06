@@ -12,7 +12,11 @@ from django.utils.html import escape
 from jsonpatch import JsonPatch, multidict
 
 from pistoke.nakyma import WebsocketNakyma
-from pistoke.tyokalut import csrf_tarkistus, json_viestiliikenne
+from pistoke.protokolla import WebsocketAliprotokolla
+from pistoke.tyokalut import (
+  CsrfKattely,
+  JsonLiikenne,
+)
 
 
 class WebsocketYhteys(WebsocketNakyma):
@@ -70,12 +74,12 @@ class WebsocketYhteys(WebsocketNakyma):
     self.toimintojono = set()
     # def __init__
 
+  websocket_protokolla = 'django-synkroni'
+
   def websocket_protokolla_json(self):
     ''' Palauta JSON-muotoinen tuettujen protokollien luettelo. '''
-    if not getattr(self.websocket, 'protokolla', None):
-      return 'null'
     return escape(self.json_koodain().encode(
-      self.websocket.protokolla
+      [self.websocket_protokolla]
     ))
     # def websocket_protokolla_json
 
@@ -157,22 +161,22 @@ class WebsocketYhteys(WebsocketNakyma):
   async def websocket(self, request, *args, **kwargs):
     ''' JSON-ohjaimet valitaan pyyntökohtaisesti. '''
     # pylint: disable=no-self-argument, arguments-differ
-    @json_viestiliikenne(
+    @WebsocketAliprotokolla(self.websocket_protokolla)
+    @JsonLiikenne(
       # Käytetään luokkakohtaisesti määriteltyä JSON-protokollaa
       # viestinnässä selaimen kanssa.
       loads={'cls': self.json_latain},
       dumps={'cls': self.json_koodain},
     )
-    @csrf_tarkistus(
+    @CsrfKattely(
       csrf_avain='csrfmiddlewaretoken',
       virhe_avain='virhe'
     )
-    async def websocket(self, request, *args, **kwargs):
+    async def websocket(request, *args, **kwargs):
       # pylint: disable=protected-access
       return await self._websocket(request, *args, **kwargs)
       # async def websocket
-    return await websocket(self, request, *args, **kwargs)
+    return await websocket(request, *args, **kwargs)
     # def websocket
-  websocket.protokolla = 'django-synkroni'
 
   # class WebsocketYhteys
