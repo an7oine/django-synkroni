@@ -25,7 +25,10 @@ def toiminto(*args, **kwargs):
     ))
   except StopIteration:
     # pylint: disable=raise-missing-from
-    raise ValueError('Tuntematon toiminto: ' + ', '.join(kwargs))
+    raise ValueError(
+      f'Tuntematon toiminto: {", ".join(kwargs)}.'
+      f' Käytössä ovat toiminnot {", ".join((t.__name__ for t in toiminto._toiminnot))}.'
+    )
   # def toiminto
 
 
