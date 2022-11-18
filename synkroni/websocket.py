@@ -93,6 +93,10 @@ class WebsocketYhteys(WebsocketNakyma):
   async def kasittele_toiminto(self, request, *, toiminto_id, **kwargs):
     try:
       vastaus = await self.suorita_toiminto(**kwargs)
+      await request.send({
+        'toiminto_id': toiminto_id,
+        **(vastaus or {})
+      })
     # pylint: disable=broad-except
     except BaseException:
       # Kuitataan toiminto suoritetuksi poikkeuksesta huolimatta.
@@ -100,11 +104,6 @@ class WebsocketYhteys(WebsocketNakyma):
         'toiminto_id': toiminto_id,
       })
       raise
-    else:
-      await request.send({
-        'toiminto_id': toiminto_id,
-        **(vastaus or {})
-      })
     # async def kasittele_toiminto
 
   async def kasittele_saapuva_sanoma(self, request, sanoma):
