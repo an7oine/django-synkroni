@@ -115,6 +115,12 @@ class WebsocketYhteys(WebsocketNakyma):
         self.kasittele_toiminto(request, **sanoma)
       )
       self.toimintojono.add(toiminto)
+      @toiminto.add_done_callback
+      def done(task):
+        try:
+          task.result()
+        except BaseException:
+          traceback.print_exc()
 
     else:
       # Json-paikkaus: toteuta tässä.
@@ -144,13 +150,7 @@ class WebsocketYhteys(WebsocketNakyma):
     finally:
       for kesken in self.toimintojono:
         kesken.cancel()
-      tulokset = await asyncio.gather(
-        *self.toimintojono,
-        return_exceptions=True
-      )
-      for tulos in tulokset:
-        if isinstance(tulos, BaseException):
-          raise tulos
+      await asyncio.gather(*self.toimintojono)
       # finally
     # async def _websocket
 
