@@ -4,6 +4,7 @@ import asyncio
 import copy
 import functools
 import inspect
+from time import time
 
 
 def toiminto(*args, **kwargs):
@@ -58,12 +59,19 @@ class Toiminnot:
     return toiminto(self, *args, **kwargs)
     # def _toiminto
 
+  def mittaa_toiminnon_kesto(self, toiminto, kesto):
+    pass
+
   async def suorita_toiminto(self, **kwargs):
     if not kwargs:
       raise ValueError('Toiminnon tiedot puuttuvat: %r' % kwargs)
     _toiminto = self._toiminto(**kwargs)
     assert inspect.isawaitable(_toiminto)
-    return await _toiminto
+    alku = time()
+    try:
+      return await _toiminto
+    finally:
+      self.mittaa_toiminnon_kesto(_toiminto, time() - alku)
     # async def suorita_toiminto
 
   @toiminto
