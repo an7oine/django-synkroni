@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(
-  setup_requires='git-versiointi',
+  setup_requires='git-versiointi>=1.6rc3',
   name='django-synkroni',
   description='Django/Javascript-synkronointirajapinta',
   url='https://github.com/an7oine/django-synkroni.git',
