@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
+from contextlib import asynccontextmanager
 import copy
 import functools
 import inspect
@@ -33,18 +34,18 @@ def toiminto(*args, **kwargs):
   # def toiminto
 
 
-def muuttaa_tietoja(metodi):
-  @functools.wraps(metodi)
-  async def _metodi(self, *args, **kwargs):
-    async with muuttaa_tietoja.lukko:
-      vanha_data = copy.deepcopy(self.data)
-      try:
-        return await _metodi.__wrapped__(self, *args, **kwargs)
-      finally:
-        await self.data_paivitetty(vanha_data, self.data)
-      # async with muuttaa_tietoja.lukko
-    # async def _metodi
-  return _metodi
+@asynccontextmanager
+async def muuttaa_tietoja(self):
+  '''
+  Asynkroninen konteksti: lähettää muuttuneet tiedot selaimelle.
+
+  Huomaa, että vain yksi muuttaa_tietoja-konteksti voi olla
+  kerrallaan auki.
+  '''
+  async with muuttaa_tietoja.lukko:
+    vanha_data = copy.deepcopy(self.data)
+    yield
+    await self.data_paivitetty(vanha_data, self.data)
   # def muuttaa_tietoja
 muuttaa_tietoja.lukko = asyncio.Lock()
 
