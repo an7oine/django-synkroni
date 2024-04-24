@@ -115,16 +115,11 @@ class WebsocketYhteys(WebsocketNakyma):
     if 'toiminto_id' in sanoma:
       # Komento: suorita taustalla.
       # Useat peräkkäin saapuvat toiminnot ajetaan samanaikaisesti.
-      toiminto = asyncio.ensure_future(
-        self.kasittele_toiminto(request, **sanoma)
+      self.toimintojono.add(
+        asyncio.create_task(
+          self.kasittele_toiminto(request, **sanoma)
+        )
       )
-      self.toimintojono.add(toiminto)
-      @toiminto.add_done_callback
-      def done(task):
-        try:
-          task.result()
-        except BaseException:
-          traceback.print_exc()
 
     else:
       # Json-paikkaus: toteuta tässä.
