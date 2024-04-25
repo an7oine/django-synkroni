@@ -102,7 +102,7 @@ class WebsocketYhteys(WebsocketNakyma):
         **(vastaus or {})
       })
     # pylint: disable=broad-except
-    except BaseException:
+    except Exception:
       # Kuitataan toiminto suoritetuksi poikkeuksesta huolimatta.
       await request.send({
         'toiminto_id': toiminto_id,
