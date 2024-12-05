@@ -1,2 +1,23 @@
 [build-system]
-requires = ["git-versiointi>=1.6rc3", "setuptools>=42", "wheel"]
+requires = ["git-versiointi>=1.7b1", "setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "django-synkroni"
+dynamic = ["version"]
+requires-python = ">= 3.8"
+description = "Django/Javascript-synkronointirajapinta"
+readme = "README.md"
+authors = [
+  {name = "Antti Hautaniemi", email = "antti.hautaniemi@me.com"},
+]
+license = {"text" = "MIT"}
+dependencies = [
+  "django>=4.2",
+  "django-pistoke>=0.8",
+  "jsonpatch",
+]
+urls = {Repository = "https://github.com/an7oine/django-synkroni.git"}
+
+[project.entry-points."django.sovellus"]
+synkroni = "synkroni.Synkroni"
