@@ -14,6 +14,7 @@ authors = [
 license = {"text" = "MIT"}
 dependencies = [
   "django>=4.2",
+  "django-sivumedia",
   "django-pistoke>=0.8",
   "jsonpatch",
 ]
