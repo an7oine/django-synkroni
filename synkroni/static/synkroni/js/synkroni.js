@@ -242,17 +242,31 @@
       }
     },
 
-    _tulkitseVierasavaimet: function (data) {
+    _tulkitseVierasavaimet: function (data, solmu) {
+      solmu = solmu ?? [];
       for (let [avain, arvo] of Object.entries(data)) {
         if (Array.isArray(arvo))
-          for (let rivi of arvo)
-            this._tulkitseVierasavaimet(rivi);
+          for (let [indeksi, rivi] of arvo.entries())
+            this._tulkitseVierasavaimet(
+              rivi,
+              solmu.concat([avain, indeksi])
+            );
         else if (typeof arvo !== 'object' || arvo === null)
           ;
         else if (arvo.hasOwnProperty("__vierasavain__")) {
           let [
             vierasavain, vierasavain_id
           ] = arvo.__vierasavain__;
+          document.dispatchEvent(
+            new CustomEvent(
+              "data-vierasavain",
+              {detail: {
+                lahde: solmu.concat([avain]),
+                kohde: vierasavain,
+                avain: vierasavain_id,
+              }}
+            )
+          );
           Object.defineProperty(
             data,
             avain,
@@ -281,7 +295,10 @@
           );
         }
         else
-          this._tulkitseVierasavaimet(arvo);
+          this._tulkitseVierasavaimet(
+            arvo,
+            solmu.concat([avain])
+          );
       }
     },
 
