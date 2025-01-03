@@ -6,9 +6,18 @@
     websocket,
     protokolla,
     kattely,
+    asetukset,
   } = document.currentScript.dataset;
 
   function Synkroni() {
+    // Liipaistaanko globaali `data-paivitetty` kunkin saapuvan
+    // muutoksen jälkeen?
+    // - jos epätosi, vain muuttuneet avaimet liipaistaan.
+    this.paivitaKaikki = true;
+
+    // Ylikirjoitetaan tähänastiset parametrit.
+    Object.assign(this, asetukset ?? {});
+
     this.osoite = websocket;
     this.protokolla = JSON.parse(protokolla ?? "null");
     this.toimintojono = {}; // toiminto_id: {vastaus, virhe}
@@ -36,10 +45,20 @@
       }
     });
 
-    // Alusta `document.data`.
-    let data = JSON.parse(
-      document.getElementById("synkroni-alkutilanne").textContent
+    // Alusta `document.data` tarvittaessa.
+    let data = document.data ?? {};
+    let alkutilanneEl = document.getElementById(
+      "synkroni-alkutilanne"
     );
+    if (alkutilanneEl)
+      data = JSON.parse(alkutilanneEl.textContent);
+
+    // Tee kopio mahdollista myöhempää JSON-vientiä varten.
+    this.__vietavaData = structuredClone(data);
+    // this.__vietavaData = JSON.parse(JSON.stringify(data));
+
+    // Kaksisuuntainen tiedonsiirto: lähetetään dataan selaimessa
+    // tehdyt muutokset palvelimelle.
     if (window.JSONPatcherProxy) {
       this.tarkkailija = new JSONPatcherProxy(data);
       data = this.tarkkailija.observe(
@@ -47,10 +66,6 @@
       );
     }
     document.data = data;
-
-    this.__vietavaData = JSON.parse(
-      document.getElementById("synkroni-alkutilanne").textContent
-    );
 
     this._avaaYhteys();
   }
@@ -168,6 +183,36 @@
       }
     },
 
+    _poimiMuuttuneetSolmut: function (p) {
+      // Poimi kaikki JSON-paikkauksen muuttamat solmut.
+      // Huomaa, että kukin muutettu polku esitetään vinoviivalla
+      // alkavana, vinoviivoin erotettuna merkkijonona.
+      // Ensimmäinen alkio on aina tyhjä, viimeinen on muuttunut tieto.
+      // Poimitaan kunkin polun kaikki alkiot näiden väliltä.
+      // Poistetaan kaksoiskappaleet luettelosta.
+      let muuttuneetSolmut = p.map(function (muutos) {
+        return muutos.path.split("/").slice(1, -1);
+      });
+
+      // Järjestä muutokset ensin polun pituuden mukaan, sitten aakkosittain.
+      muuttuneetSolmut.sort(function (s1, s2) {
+        return s1.length - s2.length || (s1 < s2? -1 : s1 > s2? 1 : 0);
+      });
+
+      // Suodata pois muihin muutoksiin sisältyvät, sisemmät muutokset.
+      // Palauta tulokset tavuviivoin erotettuina merkkijonoina.
+      return muuttuneetSolmut.reduce(function (muutokset, s2) {
+        for (let muutos of muutokset)
+          if (muutos.reduce(function (tulos, alkio, i) {
+            return tulos && alkio === s2[i];
+          }))
+            // Jokin aiempi muutospolku sisälsi s2:n: ei lisätä mitään.
+            return muutokset;
+        // Mikään aiempi muutos ei sisältänyt s2:ta: lisätään se listalle.
+        return muutokset.concat([s2]);
+      }, []).map(function (muutos) { return muutos.join("-"); });
+    },
+
     _lahtevaMuutos: function (p) {
       jsonpatch.apply(this.__vietavaData, JSON.parse(JSON.stringify(p)));
       if (this.yhteys?.readyState === 1) {
@@ -184,9 +229,17 @@
       jsonpatch.apply(this.__vietavaData, JSON.parse(JSON.stringify(p)));
       this._tulkitseVierasavaimet(document.data);
       this.tarkkailija?.resume?.();
-      document.dispatchEvent(
-        new Event("data-paivitetty")
-      );
+      if (this.paivitaKaikki)
+        document.dispatchEvent(
+          new Event("data-paivitetty")
+        );
+      else {
+        document.dispatchEvent(
+          new CustomEvent("data-paivitetty", {
+            detail: this._poimiMuuttuneetSolmut(p)
+          })
+        );
+      }
     },
 
     _tulkitseVierasavaimet: function (data) {

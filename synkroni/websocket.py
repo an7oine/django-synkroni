@@ -26,7 +26,11 @@ class WebsocketYhteys(WebsocketNakyma):
   data_alkutilanne = {}
 
   # Synkronoidaanko myös selaimen tekemät muutokset palvelimelle?
-  kaksisuuntainen = False
+  kaksisuuntainen: bool = False
+
+  # Dokumentille liipaistaan globaali "data-paivitetty"-sanoma,
+  # kun data päivittyy.
+  paivita_kaikki: bool = True
 
   # Data sellaisena, kuin se kullakin ajan hetkellä näkyy, niin
   # palvelimella kuin selaimellakin.
